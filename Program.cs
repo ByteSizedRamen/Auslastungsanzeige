@@ -8,7 +8,6 @@ using AuslastungsanzeigeApp.Api.Models;
 using AuslastungsanzeigeApp.Services;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
-using AuslastungsanzeigeApp.Data.Entities;
 using Microsoft.AspNetCore.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,8 +22,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options
 // Registrierung der Services, Port 8080 ersetzt den default 5000
 builder.Services.AddScoped<SensorDataService>();
 builder.Services.AddScoped<SensorDataProcessor>();
-builder.WebHost.UseUrls("http://*:8080");
-builder.Services.AddCors(options =>  {
+//builder.WebHost.UseUrls("http://*:8080");
+builder.WebHost.UseKestrel(options =>
+{
+    options.ListenAnyIP(8080); // Sensordaten
+    options.ListenAnyIP(8081); // Frontend
+});
+builder.Services.AddCors(options =>
+{
     options.AddPolicy("Schjell",
     builder =>
     {
@@ -44,7 +49,7 @@ app.UseCors("Schjell");
 app.UseRouting();
 
 
-// API-Endpoint und Verarbeitung
+// API-Endpoint und Verarbeitung für die Sensordaten
 app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorDataService, SensorDataProcessor sensorDataProcessor) =>
 {
     try
@@ -69,7 +74,7 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
             return Results.BadRequest("Die übermittelten Sensordaten waren nicht valide.");
         }
 
-         await sensorDataService.ProcessSensorDataAsync(sensorData);
+        await sensorDataService.ProcessSensorDataAsync(sensorData);
 
         // 
         //await sensorDataService.ProcessSensorData(sensorData);
@@ -81,7 +86,7 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
             // Erstelt eine Zug-Entity aus den Sensordaten
             var aktuelleAuslastung = await sensorDataService.ProcessSensorDataAsync(sensorData);
 
-            // Wendet die Business-Logik auf dem neuen Zug an (errechnet eine simple Auslastung) OBSOLET
+            // Wendet die Business-Logik auf dem neuen Zug an (errechnet eine Auslastung anhand der Personenzahl)
             var auslastung = sensorDataProcessor.ProcessSensorData(aktuelleAuslastung);
 
 
@@ -103,6 +108,26 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
         Console.WriteLine(ex);
         return Results.StatusCode(500);
     }
+});
+
+// API-Endpoint für Kommunikation mit dem Frontend
+app.MapGet("/frontend", async (HttpContext context, SensorDataProcessor sensorDataProcessor, SensorDataService sensorDataService) =>
+{
+
+    // Zieht die Sitzplatzbelegung aus der Tabelle raus: Zu Demozwecken wird jeder mitgeschickte Input überschrieben.
+    string inputOverride = "Brezel-1";
+
+    try
+    {
+        var json = sensorDataService.CreateSeatAvailabilityJsonAsync(inputOverride);
+        return Results.Ok(json);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex);
+        return Results.StatusCode(500);
+    }
+
 });
 
 
