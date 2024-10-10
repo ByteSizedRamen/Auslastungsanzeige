@@ -29,19 +29,20 @@ namespace AuslastungsanzeigeApp.Services
             return zugAusDatenbank;
         }
 
-            public async Task<string> CreateSeatAvailabilityJsonAsync(string zugname)
+        public async Task<string> CreateSeatAvailabilityJsonAsync(string zugname)
         {
             // Zieht die Auslastung für einen gegebenen Zugnamen aus der Tabelle
             var seatAvailabilityData = await _dbContext.SeatAvailability.FirstOrDefaultAsync(e => e.Zugname.Equals(zugname));
 
-            if (seatAvailabilityData == null) {
+            if (seatAvailabilityData == null)
+            {
                 return null;
             }
 
             // Die aktuellen Sitzdaten sind bereits als JSON in der Tabelle gespeichert
             return seatAvailabilityData.Seats;
         }
-        
+
         public async Task<Auslastung> ProcessSensorDataAsync(SensorDataDto sensorDataDto)
         {
             var zugAusDatenbank = await this.ReturnZugAusDatenbank(sensorDataDto.Zugname);
@@ -69,17 +70,36 @@ namespace AuslastungsanzeigeApp.Services
                 // Sichert die Entity in der Datenbank
                 _dbContext.Auslastung.Add(berechneteAuslastung);
                 await _dbContext.SaveChangesAsync();
+
+                return berechneteAuslastung;
             }
             catch (DbUpdateException ex)
             {
                 Console.WriteLine($"Database update error: {ex}");
                 throw; // yeet zurück zur Program.cs
             }
+        }
 
-            return berechneteAuslastung;
+        public async Task<string> CreateJsonFromEntityAsync(Auslastung auslastungEntity, double auslastungWert)
+        {
 
-            //
-            //_sensorDataProcessor.ProcessSensorData(newEntity); 
+            if (auslastungWert == null)
+            {
+                return string.Empty; 
+            }
+
+            // Erstellt ein Objekt mit den Datenfeldern
+            var dataForJson = new
+            {
+                Auslastung = auslastungWert,
+                Personenzahl = auslastungEntity.Personenzahl,
+            };
+
+            // Serialisiert die JSON aus dem Objekt
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            string json = JsonSerializer.Serialize(dataForJson, options);
+
+            return json;
         }
 
         public async Task<List<Zuege>> GetNewEntityDataAsync()

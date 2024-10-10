@@ -35,22 +35,10 @@ namespace AuslastungsanzeigeApp.BusinessLogic
     });
 
             // temporäres Stand-In für die Tabelle
-            int maximalePersonenzahl = 10;
+            double maximalePersonenzahl = 10;
 
-            switch (aktuelleAuslastung.Personenzahl)
-            {
-                case var _ when (aktuelleAuslastung.Personenzahl >= 5):
-                    auslastung = 50;
-                    break;
-
-                case var _ when (aktuelleAuslastung.Personenzahl >= 7):
-                    auslastung = 75;
-                    break;
-
-                case var _ when (aktuelleAuslastung.Personenzahl == 10):
-                    auslastung = 100;
-                    break;
-            }
+            auslastung = (aktuelleAuslastung.Personenzahl / maximalePersonenzahl) * 100;
+            
             return auslastung;
         }
 

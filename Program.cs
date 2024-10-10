@@ -22,7 +22,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options
 // Registrierung der Services, Port 8080 ersetzt den default 5000
 builder.Services.AddScoped<SensorDataService>();
 builder.Services.AddScoped<SensorDataProcessor>();
-//builder.WebHost.UseUrls("http://*:8080");
 builder.WebHost.UseKestrel(options =>
 {
     options.ListenAnyIP(8080); // Sensordaten
@@ -47,7 +46,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseCors("Schjell");
 app.UseRouting();
-
 
 // API-Endpoint und Verarbeitung für die Sensordaten
 app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorDataService, SensorDataProcessor sensorDataProcessor) =>
@@ -89,14 +87,15 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
             // Wendet die Business-Logik auf dem neuen Zug an (errechnet eine Auslastung anhand der Personenzahl)
             var auslastung = sensorDataProcessor.ProcessSensorData(aktuelleAuslastung);
 
+            // Erstellt eine JSON für die Rückgabe: Auslastung + Personenzahl
+            var jsonResponse = await sensorDataService.CreateJsonFromEntityAsync(aktuelleAuslastung, auslastung);
 
+            return Results.Ok(jsonResponse);
         }
         else
         {
             return Results.BadRequest("Verarbeitungsfehler: JSON fehlerhaft");
         }
-
-        return Results.Ok();
     }
     catch (JsonException ex)
     {
