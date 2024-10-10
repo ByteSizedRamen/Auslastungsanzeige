@@ -1,3 +1,5 @@
+using AuslastungsanzeigeApp.Data.Entities;
+
 namespace AuslastungsanzeigeApp.Api.Models
 {
     public class SensorDataDto
@@ -7,7 +9,7 @@ namespace AuslastungsanzeigeApp.Api.Models
         public double Gewicht { get; set; }
         public int Sitzauslastung { get; set; }
         public string Station { get; set; }
-
+        public SeatData SeatData { get; set; } 
 
     }
 }
