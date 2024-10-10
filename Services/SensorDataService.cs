@@ -17,15 +17,21 @@ namespace AuslastungsanzeigeApp.Services
             _dbContext = dbContext;
         }
 
-        public async Task<Auslastung> ProcessSensorDataAsync(SensorDataDto sensorDataDto)
+        public async Task<Zuege> ReturnZugAusDatenbank(string zugnummer)
         {
-            // Wir brauchen den Zug aus den Zuegen, sowie eine Auslastung
-            var zugAusDatenbank = await _dbContext.Zuege.FirstOrDefaultAsync(e => e.Zugname == sensorDataDto.Zugname);
+            var zugAusDatenbank = await _dbContext.Zuege.FirstOrDefaultAsync(e => e.Zugname == zugnummer);
 
             if (zugAusDatenbank == null)
             {
                 return null;
             }
+
+            return zugAusDatenbank;
+        }
+
+        public async Task<Auslastung> ProcessSensorDataAsync(SensorDataDto sensorDataDto)
+        {
+            var zugAusDatenbank = await this.ReturnZugAusDatenbank(sensorDataDto.Zugname);
 
 
             // Berechnet die Personenzahl aus dem Gewicht
@@ -35,7 +41,8 @@ namespace AuslastungsanzeigeApp.Services
             double zugauslastung = (Convert.ToDouble(sensorDataDto.Sitzauslastung) / Convert.ToDouble(zugAusDatenbank.Sitze)) * 100;
 
             // Sichert das Ausleseergebnis in der Datenbank
-            var berechneteAuslastung = new Auslastung {
+            var berechneteAuslastung = new Auslastung
+            {
                 Zugname = zugAusDatenbank.Zugname,
                 Gewicht = sensorDataDto.Gewicht,
                 Personenzahl = Convert.ToInt32(Personenauslastung),
@@ -44,7 +51,7 @@ namespace AuslastungsanzeigeApp.Services
                 Station = sensorDataDto.Station
 
             };
-            
+
             try
             {
                 // Sichert die Entity in der Datenbank

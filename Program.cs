@@ -7,7 +7,6 @@ using AuslastungsanzeigeApp.BusinessLogic;
 using AuslastungsanzeigeApp.Api.Models;
 using AuslastungsanzeigeApp.Services;
 using Microsoft.AspNetCore.Http;
-
 using System.Text.Json;
 using AuslastungsanzeigeApp.Data.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -46,7 +45,7 @@ app.UseRouting();
 
 
 // API-Endpoint und Verarbeitung
-app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorDataService) =>
+app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorDataService, SensorDataProcessor sensorDataProcessor) =>
 {
     try
     {
@@ -78,14 +77,14 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
         if (sensorData.Gewicht != 0)
         {
             Console.WriteLine(sensorData.Gewicht.ToString());
-            
-       
-            //context.Response.StatusCode = 200; // meldet Übermittlung OK
-            //await context.Response.CompleteAsync();
 
             // Erstelt eine Zug-Entity aus den Sensordaten
-            var newZug = await sensorDataService.GetNewEntityDataAsync();
-            //Console.WriteLine(newZug.FirstOrDefault().Zugnummer.ToString());
+            var aktuelleAuslastung = await sensorDataService.ProcessSensorDataAsync(sensorData);
+
+            // Wendet die Business-Logik auf dem neuen Zug an (errechnet eine simple Auslastung) OBSOLET
+            var auslastung = sensorDataProcessor.ProcessSensorData(aktuelleAuslastung);
+
+
         }
         else
         {
