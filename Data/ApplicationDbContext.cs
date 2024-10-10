@@ -17,8 +17,9 @@ namespace AuslastungsanzeigeApp.Data
         }
 
         //public DbSet<Entities.SensorReading> SensorReadings { get; set; }
-        public DbSet<Entities.Zuege> Zuege { get; set; }
-        public DbSet<Entities.Auslastung> Auslastung { get; set; }
+        public DbSet<Zuege> Zuege { get; set; }
+        public DbSet<Auslastung> Auslastung { get; set; }
+        public DbSet<SeatAvailability> SeatAvailability { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -29,10 +29,22 @@ namespace AuslastungsanzeigeApp.Services
             return zugAusDatenbank;
         }
 
+            public async Task<string> CreateSeatAvailabilityJsonAsync(string zugname)
+        {
+            // Zieht die Auslastung für einen gegebenen Zugnamen aus der Tabelle
+            var seatAvailabilityData = await _dbContext.SeatAvailability.FirstOrDefaultAsync(e => e.Zugname.Equals(zugname));
+
+            if (seatAvailabilityData == null) {
+                return null;
+            }
+
+            // Die aktuellen Sitzdaten sind bereits als JSON in der Tabelle gespeichert
+            return seatAvailabilityData.Seats;
+        }
+        
         public async Task<Auslastung> ProcessSensorDataAsync(SensorDataDto sensorDataDto)
         {
             var zugAusDatenbank = await this.ReturnZugAusDatenbank(sensorDataDto.Zugname);
-
 
             // Berechnet die Personenzahl aus dem Gewicht
             var Personenauslastung = sensorDataDto.Gewicht / 100;
