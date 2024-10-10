@@ -1,10 +1,8 @@
 using AuslastungsanzeigeApp.Data;
 using AuslastungsanzeigeApp.Data.Entities;
 using AuslastungsanzeigeApp.Api.Models;
-using AuslastungsanzeigeApp.BusinessLogic;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using System.Net.Http.Json;
 
 namespace AuslastungsanzeigeApp.Services
 {
