@@ -9,17 +9,21 @@ using AuslastungsanzeigeApp.Services;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<ApplicationDbContext>(options
- =>
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"),
+                     ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection")))
 
-                     ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
+
+           .LogTo(Console.WriteLine, LogLevel.Information));
 
 
-// Registrierung der Services, Port 8080 ersetzt den default 5000
+// Registrierung der Services, Port 8080/8081 ersetzt den default 5000
 builder.Services.AddScoped<SensorDataService>();
 builder.Services.AddScoped<SensorDataProcessor>();
 builder.WebHost.UseKestrel(options =>
@@ -37,6 +41,14 @@ builder.Services.AddCors(options =>
         .AllowAnyHeader();
     });
 });
+builder.Services.AddRateLimiter(_ => _
+    .AddFixedWindowLimiter(policyName: "OnePerSecond", options =>
+    {
+        options.PermitLimit = 1;
+        options.Window = TimeSpan.FromSeconds(1);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 1;
+    }));
 
 var app = builder.Build();
 
@@ -46,6 +58,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseCors("Schjell");
 app.UseRouting();
+app.UseRateLimiter();
 
 // API-Endpoint und Verarbeitung für die Sensordaten
 app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorDataService, SensorDataProcessor sensorDataProcessor) =>
@@ -72,11 +85,6 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
             return Results.BadRequest("Die übermittelten Sensordaten waren nicht valide.");
         }
 
-        await sensorDataService.ProcessSensorDataAsync(sensorData);
-
-        // 
-        //await sensorDataService.ProcessSensorData(sensorData);
-
         if (sensorData.Gewicht != 0)
         {
             Console.WriteLine(sensorData.Gewicht.ToString());
@@ -89,6 +97,13 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
 
             // Erstellt eine JSON für die Rückgabe: Auslastung + Personenzahl
             var jsonResponse = await sensorDataService.CreateJsonFromEntityAsync(aktuelleAuslastung, auslastung);
+
+            if (jsonResponse == null)
+            {
+                return Results.BadRequest("Verarbeitungsfehler: Es konnte keine Antwort erstellt werden.");
+            }
+
+            //Console.WriteLine(jsonResponse);
 
             return Results.Ok(jsonResponse);
         }
@@ -107,19 +122,26 @@ app.MapPost("/sensordata", async (HttpContext context, SensorDataService sensorD
         Console.WriteLine(ex);
         return Results.StatusCode(500);
     }
-});
+}).RequireRateLimiting("OnePerSecond");
 
 // API-Endpoint für Kommunikation mit dem Frontend
 app.MapGet("/frontend", async (HttpContext context, SensorDataProcessor sensorDataProcessor, SensorDataService sensorDataService) =>
 {
 
     // Zieht die Sitzplatzbelegung aus der Tabelle raus: Zu Demozwecken wird jeder mitgeschickte Input überschrieben.
-    string inputOverride = "Brezel-1";
+    string inputOverride = "Brezel-3";
 
     try
     {
-        var json = sensorDataService.CreateSeatAvailabilityJsonAsync(inputOverride);
-        return Results.Ok(json);
+        //var json = sensorDataService.CreateSeatAvailabilityJsonAsync(inputOverride);
+        
+        string seatAvailabilityJson = await sensorDataService.CreateSeatAvailabilityJsonAsync(inputOverride);
+        Console.WriteLine(seatAvailabilityJson);
+
+
+        return Results.Ok(seatAvailabilityJson);
+
+        //return Results.Ok(json);
     }
     catch (Exception ex)
     {

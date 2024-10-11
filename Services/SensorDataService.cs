@@ -3,6 +3,8 @@ using AuslastungsanzeigeApp.Data.Entities;
 using AuslastungsanzeigeApp.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace AuslastungsanzeigeApp.Services
 {
@@ -10,9 +12,9 @@ namespace AuslastungsanzeigeApp.Services
     {
         private readonly ApplicationDbContext _dbContext;
 
-        public SensorDataService(ApplicationDbContext dbContext)
+        public SensorDataService(ApplicationDbContext dbContext1)
         {
-            _dbContext = dbContext;
+            _dbContext = dbContext1;
         }
 
         public async Task<Zuege> ReturnZugAusDatenbank(string zugnummer)
@@ -29,16 +31,29 @@ namespace AuslastungsanzeigeApp.Services
 
         public async Task<string> CreateSeatAvailabilityJsonAsync(string zugname)
         {
-            // Zieht die Auslastung für einen gegebenen Zugnamen aus der Tabelle
-            var seatAvailabilityData = await _dbContext.SeatAvailability.FirstOrDefaultAsync(e => e.Zugname.Equals(zugname));
-
-            if (seatAvailabilityData == null)
+            try
             {
-                return null;
-            }
+                //
+                var seatAvailability = await _dbContext.SeatAvailability
+                    .FirstOrDefaultAsync(sa => sa.Zugname == zugname);
 
-            // Die aktuellen Sitzdaten sind bereits als JSON in der Tabelle gespeichert
-            return seatAvailabilityData.Seats;
+                if (seatAvailability == null)
+                {
+                    Console.WriteLine($"Verarbeitungfehler: Zum Zug '{zugname}' wurde keine SeatMap gefunden.");
+                    return string.Empty;
+                }
+
+                var seatData = seatAvailability.Seats;
+
+                string jsonString = JsonConvert.SerializeObject(seatData, Formatting.Indented);
+
+                return jsonString;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unbehandelte Ausnahme: {ex}");
+                return string.Empty;
+            }
         }
 
         public async Task<Auslastung> ProcessSensorDataAsync(SensorDataDto sensorDataDto)
@@ -51,7 +66,7 @@ namespace AuslastungsanzeigeApp.Services
             // Berechnet die Sitzauslastung in Prozent
             double zugauslastung = (Convert.ToDouble(sensorDataDto.Sitzauslastung) / Convert.ToDouble(zugAusDatenbank.Sitze)) * 100;
 
-            // Sichert das Ausleseergebnis in der Datenbank
+            // Entity für die Auslastung
             var berechneteAuslastung = new Auslastung
             {
                 Zugname = zugAusDatenbank.Zugname,
@@ -63,10 +78,37 @@ namespace AuslastungsanzeigeApp.Services
 
             };
 
+            // Entity für die SeatAvailability
+            var seatData = new SeatData
+            {
+                Seats = new List<Seat>
+                {
+                    new Seat { id = "A1", taken = true },
+                    new Seat { id = "A2", taken = false },
+                    new Seat { id = "A3", taken = true },
+                    new Seat { id = "A4", taken = false }
+                }
+            };
+
+            // Dummydaten für Demonstrationszwecke
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(seatData);
+
+            var seatAvailability = new SeatAvailability
+            {
+                Zugname = sensorDataDto.Zugname,
+                Seats = jsonString
+            };
+
+
             try
             {
-                // Sichert die Entity in der Datenbank
+                // Sichert die Entities in der Datenbank
                 _dbContext.Auslastung.Add(berechneteAuslastung);
+
+                await _dbContext.SaveChangesAsync();
+
+                _dbContext.SeatAvailability.Add(seatAvailability);
+                _dbContext.SeatAvailability.Add(seatAvailability);
                 await _dbContext.SaveChangesAsync();
 
                 return berechneteAuslastung;
@@ -83,7 +125,7 @@ namespace AuslastungsanzeigeApp.Services
 
             if (auslastungWert == null)
             {
-                return string.Empty; 
+                return string.Empty;
             }
 
             // Erstellt ein Objekt mit den Datenfeldern
@@ -95,7 +137,7 @@ namespace AuslastungsanzeigeApp.Services
 
             // Serialisiert die JSON aus dem Objekt
             var options = new JsonSerializerOptions { WriteIndented = true };
-            string json = JsonSerializer.Serialize(dataForJson, options);
+            string json = System.Text.Json.JsonSerializer.Serialize(dataForJson, options);
 
             return json;
         }

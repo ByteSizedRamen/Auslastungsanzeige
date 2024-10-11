@@ -16,6 +16,10 @@ namespace AuslastungsanzeigeApp.Data
             _configuration = configuration;
         }
 
+        public ApplicationDbContext()
+        {
+        }
+
         //public DbSet<Entities.SensorReading> SensorReadings { get; set; }
         public DbSet<Zuege> Zuege { get; set; }
         public DbSet<Auslastung> Auslastung { get; set; }
@@ -26,6 +30,11 @@ namespace AuslastungsanzeigeApp.Data
             // Configure the NewEntity table to use the 'Id' property as the primary key
             modelBuilder.Entity<Zuege>()
                 .HasKey(e => e.Id);
+            modelBuilder.Entity<SeatData>()
+                .HasNoKey();
+            modelBuilder.Entity<SeatAvailability>()
+                .Property(sa => sa.Seats)
+                .ValueGeneratedNever(); 
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
