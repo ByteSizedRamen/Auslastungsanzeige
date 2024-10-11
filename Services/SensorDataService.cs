@@ -87,6 +87,8 @@ namespace AuslastungsanzeigeApp.Services
                     new Seat { id = "A2", taken = false },
                     new Seat { id = "A3", taken = true },
                     new Seat { id = "A4", taken = false }
+
+                    // Test
                 }
             };
 
