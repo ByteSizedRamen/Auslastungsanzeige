@@ -17,10 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"),
-                     ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection")))
-
-
-           .LogTo(Console.WriteLine, LogLevel.Information));
+                     ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
 
 // Registrierung der Services, Port 8080/8081 ersetzt den default 5000
@@ -45,9 +42,9 @@ builder.Services.AddRateLimiter(_ => _
     .AddFixedWindowLimiter(policyName: "OnePerSecond", options =>
     {
         options.PermitLimit = 1;
-        options.Window = TimeSpan.FromSeconds(1);
+        options.Window = TimeSpan.FromSeconds(3);
         options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 1;
+        options.QueueLimit = 0;
     }));
 
 var app = builder.Build();
@@ -129,7 +126,7 @@ app.MapGet("/frontend", async (HttpContext context, SensorDataProcessor sensorDa
 {
 
     // Zieht die Sitzplatzbelegung aus der Tabelle raus: Zu Demozwecken wird jeder mitgeschickte Input überschrieben.
-    string inputOverride = "Brezel-3";
+    string inputOverride = "Brezel-1";
 
     try
     {

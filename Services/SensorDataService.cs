@@ -78,9 +78,15 @@ namespace AuslastungsanzeigeApp.Services
 
             };
 
+            //Console.WriteLine(sensorDataDto.SeatData.ToString());
+            //var seatData = System.Text.Json.JsonSerializer.Deserialize<SeatData>(sensorDataDto.);
+
             // Entity für die SeatAvailability
             var seatData = new SeatData
             {
+                //Seats = System.Text.Json.JsonSerializer.Serialize(sensorDataDto.SeatData),
+
+
                 Seats = new List<Seat>
                 {
                     new Seat { id = "A1", taken = true },
@@ -109,7 +115,6 @@ namespace AuslastungsanzeigeApp.Services
 
                 await _dbContext.SaveChangesAsync();
 
-                _dbContext.SeatAvailability.Add(seatAvailability);
                 _dbContext.SeatAvailability.Add(seatAvailability);
                 await _dbContext.SaveChangesAsync();
 
